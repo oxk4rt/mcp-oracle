@@ -1,0 +1,33 @@
+# Dependencias
+node_modules/
+
+# Salida de compilación
+dist/
+out/
+*.tgz
+
+# Caché TypeScript
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Variables de entorno / credenciales — NUNCA en Git
+.env
+.env.*
+credentials.json
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.idea/
+.vscode/
+
+# Documentación interna (planes, checklists, test plans)
+plans/
+
+# Scripts SQL locales
+sql/

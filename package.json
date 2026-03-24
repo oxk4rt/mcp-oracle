@@ -1,0 +1,28 @@
+{
+  "name": "mcp-oracle",
+  "version": "1.0.0",
+  "description": "MCP server for Oracle DB — query and explore Oracle databases from Claude Code and any MCP-compatible client",
+  "author": "Óscar Espada Garcia <oxkarteg@gmail.com>",
+  "license": "MIT",
+  "module": "index.ts",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oxk4rt/mcp-oracle"
+  },
+  "private": true,
+  "scripts": {
+    "start": "bun run index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/oracledb": "^6.10.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "oracledb": "^6.10.0"
+  }
+}

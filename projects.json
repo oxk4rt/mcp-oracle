@@ -1,0 +1,27 @@
+{
+  "env_aliases": {
+    "integracion":   ["dsv", "dev", "desarrollo", "local"],
+    "preproduccion": ["pre", "preprod"],
+    "produccion":    ["pro", "prod"]
+  },
+  "projects": [
+    {
+      "code":           "TEST_LOCAL",
+      "aliases":        ["TEST", "test"],
+      "default_env":    "integracion",
+      "default_schema": "OSCAR",
+      "environments": {
+        "integracion": {
+          "host":    "localhost",
+          "port":    1521,
+          "service": "FREEPDB1"
+        },
+        "preproduccion": {
+          "host":    "localhost",
+          "port":    1521,
+          "service": "FREEPDB1"
+        }
+      }
+    }
+  ]
+}
