@@ -114,6 +114,31 @@ claude mcp add \
 
 The resolver automatically scans all env vars matching the `CODE__ENTORNO__USER/PASS` pattern and maps them to the corresponding project and environment defined in `projects.json`.
 
+If you manage Claude MCP servers through `~/.claude.json`, the equivalent block looks like this:
+
+```json
+{
+  "oracle": {
+    "type": "stdio",
+    "command": "bun",
+    "args": [
+      "run",
+      "C:\\path\\to\\mcp-oracle\\index.ts"
+    ],
+    "env": {
+      "MCP_ORACLE_PROJECTS_PATH": "C:\\path\\to\\mcp-oracle\\projects.json",
+      "ORACLE_CLIENT_PATH": "C:\\path\\to\\instantclient_23_0",
+      "TEST_LOCAL__INTEGRACION__USER": "usuario",
+      "TEST_LOCAL__INTEGRACION__PASS": "password",
+      "TEST_LOCAL__PREPRODUCCION__USER": "usuario",
+      "TEST_LOCAL__PREPRODUCCION__PASS": "password"
+    }
+  }
+}
+```
+
+This exact local example matches the Docker Oracle Free setup documented below. For non-local environments, keep the same shape but replace credentials and connection settings accordingly.
+
 ---
 
 ## Tools
@@ -124,7 +149,7 @@ The resolver automatically scans all env vars matching the `CODE__ENTORNO__USER/
 | `list_schemas` | List available Oracle schemas/owners. |
 | `list_tables` | List tables in a schema (defaults to `default_schema`). |
 | `describe_table` | Show columns, types, PK, and FK constraints for a table. |
-| `execute_query` | Execute a SELECT query. INSERT/UPDATE/DELETE/DDL are rejected. |
+| `execute_query` | Execute a SELECT or CTE (WITH) query. INSERT/UPDATE/DELETE/DDL are rejected. |
 | `get_relations` | PK/FK map for a table or an entire schema via `ALL_CONSTRAINTS`. |
 | `get_join_path` | FK-graph BFS traversal to find the JOIN path between two tables. |
 
