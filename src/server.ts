@@ -127,7 +127,7 @@ const TOOLS = [
 
 export async function startServer(): Promise<void> {
   const server = new Server(
-    { name: "oracle", version: "1.0.0" },
+    { name: "oracle", version: "1.1.0" },
     { capabilities: { tools: {} } }
   );
 

@@ -6,9 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- **`execute_query` SELECT guard**: now accepts CTEs (`WITH ... SELECT`) in addition to plain `SELECT` statements
-- **Date formatting**: Oracle `DATE` values are now returned as `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` instead of raw ISO UTC strings
-- **FETCH FIRST limit**: `execute_query` now injects `FETCH FIRST N ROWS ONLY` into queries that lack a row limiter, reducing Oracle-side load on large datasets; queries that already include `FETCH FIRST`, `ROWNUM` or `OFFSET` are left untouched
+- **`execute_query` SELECT guard**: now accepts read-only CTEs (`WITH ... SELECT`) in addition to plain `SELECT` statements, while still rejecting DML, DDL and PL/SQL blocks
+- **Date formatting**: Oracle `DATE` values are now returned as `YYYY-MM-DD` or `YYYY-MM-DD HH:MM:SS` without converting them to UTC
+- **FETCH FIRST limit**: `execute_query` now normalizes a terminal `;` and injects an Oracle-side limiter when the query lacks `FETCH FIRST`, `ROWNUM` or `OFFSET`, preserving the `max_rows` cap while avoiding large unrestricted reads
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "mcp-oracle",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Oracle DB — query and explore Oracle databases from Claude Code and any MCP-compatible client",
   "author": "Óscar Espada Garcia <oxkarteg@gmail.com>",
   "license": "MIT",
