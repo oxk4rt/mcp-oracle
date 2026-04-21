@@ -44,6 +44,20 @@ async function getPool(conn: ResolvedConnection): Promise<oracledb.Pool> {
   return pool;
 }
 
+function formatDates(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (v instanceof Date) {
+      const hasTime = v.getUTCHours() !== 0 || v.getUTCMinutes() !== 0 || v.getUTCSeconds() !== 0;
+      const iso = v.toISOString();
+      out[k] = hasTime ? iso.slice(0, 19).replace("T", " ") : iso.slice(0, 10);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 export async function query(
   conn: ResolvedConnection,
   sql: string,
@@ -60,7 +74,7 @@ export async function query(
     const rawRows = (result.rows ?? []) as Record<string, unknown>[];
     const columns = result.metaData?.map((m) => m.name) ?? Object.keys(rawRows[0] ?? {});
 
-    return { columns, rows: rawRows };
+    return { columns, rows: rawRows.map(formatDates) };
   } finally {
     await connection.close();
   }

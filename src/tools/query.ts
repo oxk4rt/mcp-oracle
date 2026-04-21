@@ -13,11 +13,21 @@ function assertSelectOnly(sql: string): void {
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .trimStart();
 
-  if (!/^SELECT\b/i.test(stripped)) {
+  const isSelect = /^SELECT\b/i.test(stripped);
+  const isCte = /^WITH\b/i.test(stripped) && /\bSELECT\b/i.test(stripped);
+
+  if (!isSelect && !isCte) {
     throw new Error(
       `Only SELECT statements are allowed. Got: "${stripped.slice(0, 60).trim()}..."`
     );
   }
+}
+
+function applyFetchLimit(sql: string, maxRows: number): string {
+  const normalized = sql.replace(/--[^\n]*/g, " ").replace(/\/\*[\s\S]*?\*\//g, " ").toUpperCase();
+  const alreadyLimited = /\bFETCH\s+FIRST\b|\bROWNUM\b|\bOFFSET\b/.test(normalized);
+  if (alreadyLimited) return sql;
+  return `${sql.trimEnd()}\nFETCH FIRST ${maxRows} ROWS ONLY`;
 }
 
 export async function executeQuery(
@@ -26,10 +36,11 @@ export async function executeQuery(
   maxRows = 500
 ): Promise<string> {
   assertSelectOnly(sql);
-  const result = await query(conn, sql);
+  const limitedSql = applyFetchLimit(sql, maxRows);
+  const result = await query(conn, limitedSql);
 
-  const truncated = result.rows.length > maxRows;
-  const rows = truncated ? result.rows.slice(0, maxRows) : result.rows;
+  const truncated = result.rows.length >= maxRows;
+  const rows = result.rows;
 
   return JSON.stringify(
     { columns: result.columns, rows, rowCount: rows.length, truncated },
