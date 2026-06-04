@@ -49,6 +49,10 @@ const TOOLS = [
           type: "number",
           description: "Maximum rows to return (default: 500, hard cap: 1000)",
         },
+        offset: {
+          type: "number",
+          description: "Row offset for pagination (default: 0). Use with max_rows to paginate large result sets.",
+        },
       },
       required: ["project", "sql"],
     },
@@ -170,7 +174,8 @@ export async function startServer(): Promise<void> {
             text = await executeQuery(
               conn,
               args.sql as string,
-              args.max_rows as number | undefined
+              args.max_rows as number | undefined,
+              args.offset as number | undefined
             );
             break;
           case "list_tables":

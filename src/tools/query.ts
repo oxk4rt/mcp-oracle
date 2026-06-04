@@ -180,26 +180,29 @@ function assertSelectOnly(sql: string): void {
   );
 }
 
-function applyFetchLimit(sql: string, maxRows: number): string {
+function applyFetchLimit(sql: string, maxRows: number, offset = 0): string {
   const baseSql = stripTerminalSemicolon(sql);
   const normalized = stripSqlComments(baseSql).toUpperCase();
   const alreadyLimited = /\bFETCH\s+FIRST\b|\bROWNUM\b|\bOFFSET\b/.test(normalized);
   if (alreadyLimited) return baseSql;
-  return `${baseSql}\nFETCH FIRST ${maxRows + 1} ROWS ONLY`;
+  const offsetClause = offset > 0 ? `\nOFFSET ${offset} ROWS` : "";
+  return `${baseSql}${offsetClause}\nFETCH FIRST ${maxRows + 1} ROWS ONLY`;
 }
 
 export async function executeQuery(
   conn: ResolvedConnection,
   sql: string,
-  maxRows = 500
+  maxRows = 500,
+  offset = 0
 ): Promise<string> {
   const effectiveMaxRows = Math.min(
     Number.isFinite(maxRows) && maxRows > 0 ? Math.floor(maxRows) : 500,
     MAX_ROWS_HARD_LIMIT
   );
+  const effectiveOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
 
   assertSelectOnly(sql);
-  const limitedSql = applyFetchLimit(sql, effectiveMaxRows);
+  const limitedSql = applyFetchLimit(sql, effectiveMaxRows, effectiveOffset);
   const result = await query(conn, limitedSql);
 
   const truncated = result.rows.length > effectiveMaxRows;
@@ -210,6 +213,7 @@ export async function executeQuery(
     rows,
     rowCount: rows.length,
     truncated,
+    ...(effectiveOffset > 0 && { offset: effectiveOffset }),
   };
   if (truncated) {
     payload.notice =
