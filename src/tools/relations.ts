@@ -6,6 +6,7 @@
  */
 import { query } from "../oracle.ts";
 import type { ResolvedConnection } from "../resolver.ts";
+import { truncationNote } from "./utils.ts";
 
 interface FKEntry {
   columns: string[];
@@ -16,14 +17,35 @@ interface FKEntry {
 export async function getRelations(
   conn: ResolvedConnection,
   tableName?: string,
-  schema?: string
+  schema?: string,
+  limit = 100,
+  offset = 0
 ): Promise<string> {
   const owner = (schema ?? conn.defaultSchema).toUpperCase();
-  const tableFilter = tableName ? "AND c.table_name = :tname" : "";
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
+  const safeOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
   const binds: Record<string, string> = { owner };
   if (tableName) binds.tname = tableName.toUpperCase();
 
-  const [pkResult, fkResult] = await Promise.all([
+  const offsetClause = safeOffset > 0 ? `OFFSET ${safeOffset} ROWS ` : "";
+  const tableFilter = tableName
+    ? "AND c.table_name = :tname"
+    : `AND c.table_name IN (
+         SELECT DISTINCT table_name FROM all_constraints
+         WHERE owner = :owner AND constraint_type IN ('P', 'R')
+         ORDER BY table_name ${offsetClause}FETCH FIRST ${safeLimit} ROWS ONLY
+       )`;
+
+  const totalProm = tableName
+    ? Promise.resolve(0)
+    : query(conn,
+        `SELECT COUNT(DISTINCT table_name) AS cnt FROM all_constraints
+         WHERE owner = :owner AND constraint_type IN ('P', 'R')`,
+        { owner }
+      ).then((r) => Number(r.rows[0]?.CNT ?? 0));
+
+  const [totalTables, pkResult, fkResult] = await Promise.all([
+    totalProm,
     query(
       conn,
       `SELECT c.table_name, cc.column_name
@@ -82,8 +104,14 @@ export async function getRelations(
     return `No relations found in ${owner}${tableName ? `.${tableName.toUpperCase()}` : ""}`;
   }
 
+  const sortedTables = [...tables].sort();
+  const offsetNote = !tableName && safeOffset > 0 ? `\n(offset: ${safeOffset})` : "";
+  const truncNote = !tableName
+    ? truncationNote(safeLimit, totalTables - safeOffset, "tables", "Pass a higher limit or increase offset to see more.")
+    : "";
+
   const lines: string[] = [];
-  for (const t of [...tables].sort()) {
+  for (const t of sortedTables) {
     lines.push(`\n${t}:`);
     const pks = pksByTable.get(t);
     if (pks) lines.push(`  PK: (${pks.join(", ")})`);
@@ -95,5 +123,5 @@ export async function getRelations(
   }
 
   const scope = tableName ? `.${tableName.toUpperCase()}` : "";
-  return `Relations in ${owner}${scope}:${lines.join("\n")}`;
+  return `Relations in ${owner}${scope}:${lines.join("\n")}${truncNote}${offsetNote}`;
 }

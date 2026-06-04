@@ -31,3 +31,10 @@ plans/
 
 # Scripts SQL locales
 sql/
+
+# AI Memory y configuración local del desarrollador
+.ai-memory/
+.claude/
+
+# Exportaciones y artefactos locales
+MCP_Oracle_export/

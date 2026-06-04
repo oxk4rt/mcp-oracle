@@ -106,12 +106,35 @@ Path configured via `ORACLE_CLIENT_PATH` env var. Default location:
 
 ```bash
 claude mcp add \
-  -e MCP_ORACLE_PROJECTS_PATH='C:\Users\oscar\Dev\MCP\MCP_Oracle\projects.json' \
-  -e ORACLE_CLIENT_PATH='C:\Users\oscar\Dev\Oracle\instantclient\instantclient_23_0' \
+  -e MCP_ORACLE_PROJECTS_PATH='C:\path\to\mcp-oracle\projects.json' \
+  -e ORACLE_CLIENT_PATH='C:\path\to\instantclient_23_0' \
   -e CODE__INTEGRACION__USER=usuario \
   -e CODE__INTEGRACION__PASS=password \
   --scope user \
-  -- oracle bun run 'C:\Users\oscar\Dev\MCP\MCP_Oracle\index.ts'
+  -- oracle bun run 'C:\path\to\mcp-oracle\index.ts'
+```
+
+Equivalent `~/.claude.json` example:
+
+```json
+{
+  "oracle": {
+    "type": "stdio",
+    "command": "bun",
+    "args": [
+      "run",
+      "C:\\path\\to\\mcp-oracle\\index.ts"
+    ],
+    "env": {
+      "MCP_ORACLE_PROJECTS_PATH": "C:\\path\\to\\mcp-oracle\\projects.json",
+      "ORACLE_CLIENT_PATH": "C:\\path\\to\\instantclient_23_0",
+      "TEST_LOCAL__INTEGRACION__USER": "usuario",
+      "TEST_LOCAL__INTEGRACION__PASS": "password",
+      "TEST_LOCAL__PREPRODUCCION__USER": "usuario",
+      "TEST_LOCAL__PREPRODUCCION__PASS": "password"
+    }
+  }
+}
 ```
 
 ## Key Constraints

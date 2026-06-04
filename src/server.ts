@@ -47,7 +47,11 @@ const TOOLS = [
         sql: { type: "string", description: "SELECT statement to execute" },
         max_rows: {
           type: "number",
-          description: "Maximum rows to return (default: 500)",
+          description: "Maximum rows to return (default: 500, hard cap: 1000)",
+        },
+        offset: {
+          type: "number",
+          description: "Row offset for pagination (default: 0). Use with max_rows to paginate large result sets.",
         },
       },
       required: ["project", "sql"],
@@ -58,7 +62,18 @@ const TOOLS = [
     description: "List tables in an Oracle schema.",
     inputSchema: {
       type: "object",
-      properties: { ...PROJECT_ENV_PROPS, ...SCHEMA_PROP },
+      properties: {
+        ...PROJECT_ENV_PROPS,
+        ...SCHEMA_PROP,
+        limit: {
+          type: "number",
+          description: "Maximum number of tables to return (default: 100).",
+        },
+        offset: {
+          type: "number",
+          description: "Number of tables to skip for pagination (default: 0).",
+        },
+      },
       required: ["project"],
     },
   },
@@ -81,7 +96,17 @@ const TOOLS = [
     description: "List available Oracle schemas/owners.",
     inputSchema: {
       type: "object",
-      properties: { ...PROJECT_ENV_PROPS },
+      properties: {
+        ...PROJECT_ENV_PROPS,
+        limit: {
+          type: "number",
+          description: "Maximum number of schemas to return (default: 100).",
+        },
+        offset: {
+          type: "number",
+          description: "Number of schemas to skip for pagination (default: 0).",
+        },
+      },
       required: ["project"],
     },
   },
@@ -103,6 +128,14 @@ const TOOLS = [
         table_name: {
           type: "string",
           description: "Table to inspect. Omit to get relations for the whole schema.",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of tables to include in the output (default: 100).",
+        },
+        offset: {
+          type: "number",
+          description: "Number of tables to skip for pagination (default: 0).",
         },
       },
       required: ["project"],
@@ -127,7 +160,7 @@ const TOOLS = [
 
 export async function startServer(): Promise<void> {
   const server = new Server(
-    { name: "oracle", version: "1.0.0" },
+    { name: "oracle", version: "1.1.0" },
     { capabilities: { tools: {} } }
   );
 
@@ -153,20 +186,27 @@ export async function startServer(): Promise<void> {
             text = await executeQuery(
               conn,
               args.sql as string,
-              args.max_rows as number | undefined
+              args.max_rows as number | undefined,
+              args.offset as number | undefined
             );
             break;
           case "list_tables":
-            text = await listTables(conn, schema);
+            text = await listTables(conn, schema, args.limit as number | undefined, args.offset as number | undefined);
             break;
           case "describe_table":
             text = await describeTable(conn, args.table_name as string, schema);
             break;
           case "list_schemas":
-            text = await listSchemas(conn);
+            text = await listSchemas(conn, args.limit as number | undefined, args.offset as number | undefined);
             break;
           case "get_relations":
-            text = await getRelations(conn, args.table_name as string | undefined, schema);
+            text = await getRelations(
+              conn,
+              args.table_name as string | undefined,
+              schema,
+              args.limit as number | undefined,
+              args.offset as number | undefined
+            );
             break;
           case "get_join_path":
             text = await getJoinPath(
