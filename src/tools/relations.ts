@@ -18,21 +18,22 @@ export async function getRelations(
   conn: ResolvedConnection,
   tableName?: string,
   schema?: string,
-  limit = 100
+  limit = 100,
+  offset = 0
 ): Promise<string> {
   const owner = (schema ?? conn.defaultSchema).toUpperCase();
   const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
+  const safeOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
   const binds: Record<string, string> = { owner };
   if (tableName) binds.tname = tableName.toUpperCase();
 
-  // When filtering a single table: simple equality. For full schema: push limit to SQL
-  // so Oracle never sends more than safeLimit tables' worth of constraint rows.
+  const offsetClause = safeOffset > 0 ? `OFFSET ${safeOffset} ROWS ` : "";
   const tableFilter = tableName
     ? "AND c.table_name = :tname"
     : `AND c.table_name IN (
          SELECT DISTINCT table_name FROM all_constraints
          WHERE owner = :owner AND constraint_type IN ('P', 'R')
-         ORDER BY table_name FETCH FIRST ${safeLimit} ROWS ONLY
+         ORDER BY table_name ${offsetClause}FETCH FIRST ${safeLimit} ROWS ONLY
        )`;
 
   const totalProm = tableName
@@ -104,8 +105,9 @@ export async function getRelations(
   }
 
   const sortedTables = [...tables].sort();
+  const offsetNote = !tableName && safeOffset > 0 ? `\n(offset: ${safeOffset})` : "";
   const truncNote = !tableName
-    ? truncationNote(safeLimit, totalTables, "tables", "Pass a higher limit or specify table_name to see more.")
+    ? truncationNote(safeLimit, totalTables - safeOffset, "tables", "Pass a higher limit or increase offset to see more.")
     : "";
 
   const lines: string[] = [];
@@ -121,5 +123,5 @@ export async function getRelations(
   }
 
   const scope = tableName ? `.${tableName.toUpperCase()}` : "";
-  return `Relations in ${owner}${scope}:${lines.join("\n")}${truncNote}`;
+  return `Relations in ${owner}${scope}:${lines.join("\n")}${truncNote}${offsetNote}`;
 }

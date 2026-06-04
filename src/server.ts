@@ -69,6 +69,10 @@ const TOOLS = [
           type: "number",
           description: "Maximum number of tables to return (default: 100).",
         },
+        offset: {
+          type: "number",
+          description: "Number of tables to skip for pagination (default: 0).",
+        },
       },
       required: ["project"],
     },
@@ -98,6 +102,10 @@ const TOOLS = [
           type: "number",
           description: "Maximum number of schemas to return (default: 100).",
         },
+        offset: {
+          type: "number",
+          description: "Number of schemas to skip for pagination (default: 0).",
+        },
       },
       required: ["project"],
     },
@@ -124,6 +132,10 @@ const TOOLS = [
         limit: {
           type: "number",
           description: "Maximum number of tables to include in the output (default: 100).",
+        },
+        offset: {
+          type: "number",
+          description: "Number of tables to skip for pagination (default: 0).",
         },
       },
       required: ["project"],
@@ -179,20 +191,21 @@ export async function startServer(): Promise<void> {
             );
             break;
           case "list_tables":
-            text = await listTables(conn, schema, args.limit as number | undefined);
+            text = await listTables(conn, schema, args.limit as number | undefined, args.offset as number | undefined);
             break;
           case "describe_table":
             text = await describeTable(conn, args.table_name as string, schema);
             break;
           case "list_schemas":
-            text = await listSchemas(conn, args.limit as number | undefined);
+            text = await listSchemas(conn, args.limit as number | undefined, args.offset as number | undefined);
             break;
           case "get_relations":
             text = await getRelations(
               conn,
               args.table_name as string | undefined,
               schema,
-              args.limit as number | undefined
+              args.limit as number | undefined,
+              args.offset as number | undefined
             );
             break;
           case "get_join_path":
