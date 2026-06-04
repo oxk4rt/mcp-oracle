@@ -9,7 +9,8 @@ import type { ResolvedConnection } from "../resolver.ts";
 
 export async function listTables(
   conn: ResolvedConnection,
-  schema?: string
+  schema?: string,
+  limit = 100
 ): Promise<string> {
   const owner = (schema ?? conn.defaultSchema).toUpperCase();
   const result = await query(
@@ -25,20 +26,36 @@ export async function listTables(
     return `No tables found in schema ${owner}`;
   }
 
-  const lines = result.rows.map((r) => {
+  const total = result.rows.length;
+  const limited = result.rows.slice(0, limit);
+  const lines = limited.map((r) => {
     const rows = r.NUM_ROWS != null ? ` (~${r.NUM_ROWS} rows)` : "";
     return `  ${r.TABLE_NAME}${rows}`;
   });
+  const truncNote =
+    total > limit
+      ? `\n(Showing ${limit} of ${total} tables. Pass a higher limit or filter by schema to see more.)`
+      : "";
 
-  return `Tables in ${owner} (${lines.length}):\n${lines.join("\n")}`;
+  return `Tables in ${owner} (${total}):\n${lines.join("\n")}${truncNote}`;
 }
 
-export async function listSchemas(conn: ResolvedConnection): Promise<string> {
+export async function listSchemas(
+  conn: ResolvedConnection,
+  limit = 100
+): Promise<string> {
   const result = await query(
     conn,
     `SELECT DISTINCT owner FROM all_tables ORDER BY owner`
   );
 
-  const schemas = result.rows.map((r) => `  ${r.OWNER}`);
-  return `Available schemas (${schemas.length}):\n${schemas.join("\n")}`;
+  const total = result.rows.length;
+  const limited = result.rows.slice(0, limit);
+  const schemas = limited.map((r) => `  ${r.OWNER}`);
+  const truncNote =
+    total > limit
+      ? `\n(Showing ${limit} of ${total} schemas. Pass a higher limit to see more.)`
+      : "";
+
+  return `Available schemas (${total}):\n${schemas.join("\n")}${truncNote}`;
 }

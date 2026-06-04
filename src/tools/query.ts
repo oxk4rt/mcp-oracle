@@ -7,6 +7,8 @@
 import { query } from "../oracle.ts";
 import type { ResolvedConnection } from "../resolver.ts";
 
+const MAX_ROWS_HARD_LIMIT = 1000;
+
 const WRITE_OR_DDL_KEYWORDS = [
   "SELECT",
   "INSERT",
@@ -191,8 +193,10 @@ export async function executeQuery(
   sql: string,
   maxRows = 500
 ): Promise<string> {
-  const effectiveMaxRows =
-    Number.isFinite(maxRows) && maxRows > 0 ? Math.floor(maxRows) : 500;
+  const effectiveMaxRows = Math.min(
+    Number.isFinite(maxRows) && maxRows > 0 ? Math.floor(maxRows) : 500,
+    MAX_ROWS_HARD_LIMIT
+  );
 
   assertSelectOnly(sql);
   const limitedSql = applyFetchLimit(sql, effectiveMaxRows);

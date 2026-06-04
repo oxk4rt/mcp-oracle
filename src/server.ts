@@ -47,7 +47,7 @@ const TOOLS = [
         sql: { type: "string", description: "SELECT statement to execute" },
         max_rows: {
           type: "number",
-          description: "Maximum rows to return (default: 500)",
+          description: "Maximum rows to return (default: 500, hard cap: 1000)",
         },
       },
       required: ["project", "sql"],
@@ -58,7 +58,14 @@ const TOOLS = [
     description: "List tables in an Oracle schema.",
     inputSchema: {
       type: "object",
-      properties: { ...PROJECT_ENV_PROPS, ...SCHEMA_PROP },
+      properties: {
+        ...PROJECT_ENV_PROPS,
+        ...SCHEMA_PROP,
+        limit: {
+          type: "number",
+          description: "Maximum number of tables to return (default: 100).",
+        },
+      },
       required: ["project"],
     },
   },
@@ -81,7 +88,13 @@ const TOOLS = [
     description: "List available Oracle schemas/owners.",
     inputSchema: {
       type: "object",
-      properties: { ...PROJECT_ENV_PROPS },
+      properties: {
+        ...PROJECT_ENV_PROPS,
+        limit: {
+          type: "number",
+          description: "Maximum number of schemas to return (default: 100).",
+        },
+      },
       required: ["project"],
     },
   },
@@ -103,6 +116,10 @@ const TOOLS = [
         table_name: {
           type: "string",
           description: "Table to inspect. Omit to get relations for the whole schema.",
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of tables to include in the output (default: 100).",
         },
       },
       required: ["project"],
@@ -149,24 +166,36 @@ export async function startServer(): Promise<void> {
         const schema = args.schema as string | undefined;
 
         switch (name) {
-          case "execute_query":
-            text = await executeQuery(
+          case "execute_query": {
+            const raw = await executeQuery(
               conn,
               args.sql as string,
               args.max_rows as number | undefined
             );
+            const parsed = JSON.parse(raw) as { truncated: boolean; rowCount: number };
+            const prefix = parsed.truncated
+              ? `Note: result truncated — showing ${parsed.rowCount} rows. ` +
+                `Pass a lower max_rows or add WHERE clauses to narrow the result.\n\n`
+              : "";
+            text = prefix + raw;
             break;
+          }
           case "list_tables":
-            text = await listTables(conn, schema);
+            text = await listTables(conn, schema, args.limit as number | undefined);
             break;
           case "describe_table":
             text = await describeTable(conn, args.table_name as string, schema);
             break;
           case "list_schemas":
-            text = await listSchemas(conn);
+            text = await listSchemas(conn, args.limit as number | undefined);
             break;
           case "get_relations":
-            text = await getRelations(conn, args.table_name as string | undefined, schema);
+            text = await getRelations(
+              conn,
+              args.table_name as string | undefined,
+              schema,
+              args.limit as number | undefined
+            );
             break;
           case "get_join_path":
             text = await getJoinPath(

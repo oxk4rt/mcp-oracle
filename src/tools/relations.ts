@@ -16,7 +16,8 @@ interface FKEntry {
 export async function getRelations(
   conn: ResolvedConnection,
   tableName?: string,
-  schema?: string
+  schema?: string,
+  limit = 100
 ): Promise<string> {
   const owner = (schema ?? conn.defaultSchema).toUpperCase();
   const tableFilter = tableName ? "AND c.table_name = :tname" : "";
@@ -82,8 +83,15 @@ export async function getRelations(
     return `No relations found in ${owner}${tableName ? `.${tableName.toUpperCase()}` : ""}`;
   }
 
+  const sortedTables = [...tables].sort();
+  const limitedTables = sortedTables.slice(0, limit);
+  const truncNote =
+    sortedTables.length > limit
+      ? `\n(Showing ${limit} of ${sortedTables.length} tables. Pass a higher limit or specify table_name to see more.)`
+      : "";
+
   const lines: string[] = [];
-  for (const t of [...tables].sort()) {
+  for (const t of limitedTables) {
     lines.push(`\n${t}:`);
     const pks = pksByTable.get(t);
     if (pks) lines.push(`  PK: (${pks.join(", ")})`);
@@ -95,5 +103,5 @@ export async function getRelations(
   }
 
   const scope = tableName ? `.${tableName.toUpperCase()}` : "";
-  return `Relations in ${owner}${scope}:${lines.join("\n")}`;
+  return `Relations in ${owner}${scope}:${lines.join("\n")}${truncNote}`;
 }
