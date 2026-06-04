@@ -13,28 +13,28 @@ export async function listTables(
   limit = 100
 ): Promise<string> {
   const owner = (schema ?? conn.defaultSchema).toUpperCase();
-  const result = await query(
-    conn,
-    `SELECT table_name, num_rows
-     FROM all_tables
-     WHERE owner = :owner
-     ORDER BY table_name`,
-    { owner }
-  );
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
+
+  const [countResult, result] = await Promise.all([
+    query(conn, `SELECT COUNT(*) AS CNT FROM all_tables WHERE owner = :owner`, { owner }),
+    query(conn,
+      `SELECT table_name, num_rows FROM all_tables WHERE owner = :owner ORDER BY table_name FETCH FIRST ${safeLimit} ROWS ONLY`,
+      { owner }
+    ),
+  ]);
 
   if (result.rows.length === 0) {
     return `No tables found in schema ${owner}`;
   }
 
-  const total = result.rows.length;
-  const limited = result.rows.slice(0, limit);
-  const lines = limited.map((r) => {
+  const total = Number(countResult.rows[0].CNT);
+  const lines = result.rows.map((r) => {
     const rows = r.NUM_ROWS != null ? ` (~${r.NUM_ROWS} rows)` : "";
     return `  ${r.TABLE_NAME}${rows}`;
   });
   const truncNote =
-    total > limit
-      ? `\n(Showing ${limit} of ${total} tables. Pass a higher limit or filter by schema to see more.)`
+    total > safeLimit
+      ? `\n(Showing ${safeLimit} of ${total} tables. Pass a higher limit or filter by schema to see more.)`
       : "";
 
   return `Tables in ${owner} (${total}):\n${lines.join("\n")}${truncNote}`;
@@ -44,17 +44,18 @@ export async function listSchemas(
   conn: ResolvedConnection,
   limit = 100
 ): Promise<string> {
-  const result = await query(
-    conn,
-    `SELECT DISTINCT owner FROM all_tables ORDER BY owner`
-  );
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
 
-  const total = result.rows.length;
-  const limited = result.rows.slice(0, limit);
-  const schemas = limited.map((r) => `  ${r.OWNER}`);
+  const [countResult, result] = await Promise.all([
+    query(conn, `SELECT COUNT(DISTINCT owner) AS CNT FROM all_tables`),
+    query(conn, `SELECT DISTINCT owner FROM all_tables ORDER BY owner FETCH FIRST ${safeLimit} ROWS ONLY`),
+  ]);
+
+  const total = Number(countResult.rows[0].CNT);
+  const schemas = result.rows.map((r) => `  ${r.OWNER}`);
   const truncNote =
-    total > limit
-      ? `\n(Showing ${limit} of ${total} schemas. Pass a higher limit to see more.)`
+    total > safeLimit
+      ? `\n(Showing ${safeLimit} of ${total} schemas. Pass a higher limit to see more.)`
       : "";
 
   return `Available schemas (${total}):\n${schemas.join("\n")}${truncNote}`;

@@ -20,11 +20,30 @@ export async function getRelations(
   limit = 100
 ): Promise<string> {
   const owner = (schema ?? conn.defaultSchema).toUpperCase();
-  const tableFilter = tableName ? "AND c.table_name = :tname" : "";
+  const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 100;
   const binds: Record<string, string> = { owner };
   if (tableName) binds.tname = tableName.toUpperCase();
 
-  const [pkResult, fkResult] = await Promise.all([
+  // When filtering a single table: simple equality. For full schema: push limit to SQL
+  // so Oracle never sends more than safeLimit tables' worth of constraint rows.
+  const tableFilter = tableName
+    ? "AND c.table_name = :tname"
+    : `AND c.table_name IN (
+         SELECT DISTINCT table_name FROM all_constraints
+         WHERE owner = :owner AND constraint_type IN ('P', 'R')
+         ORDER BY table_name FETCH FIRST ${safeLimit} ROWS ONLY
+       )`;
+
+  const totalProm = tableName
+    ? Promise.resolve(0)
+    : query(conn,
+        `SELECT COUNT(DISTINCT table_name) AS cnt FROM all_constraints
+         WHERE owner = :owner AND constraint_type IN ('P', 'R')`,
+        { owner }
+      ).then((r) => Number(r.rows[0]?.CNT ?? 0));
+
+  const [totalTables, pkResult, fkResult] = await Promise.all([
+    totalProm,
     query(
       conn,
       `SELECT c.table_name, cc.column_name
@@ -84,14 +103,13 @@ export async function getRelations(
   }
 
   const sortedTables = [...tables].sort();
-  const limitedTables = sortedTables.slice(0, limit);
   const truncNote =
-    sortedTables.length > limit
-      ? `\n(Showing ${limit} of ${sortedTables.length} tables. Pass a higher limit or specify table_name to see more.)`
+    !tableName && totalTables > safeLimit
+      ? `\n(Showing ${safeLimit} of ${totalTables} tables. Pass a higher limit or specify table_name to see more.)`
       : "";
 
   const lines: string[] = [];
-  for (const t of limitedTables) {
+  for (const t of sortedTables) {
     lines.push(`\n${t}:`);
     const pks = pksByTable.get(t);
     if (pks) lines.push(`  PK: (${pks.join(", ")})`);

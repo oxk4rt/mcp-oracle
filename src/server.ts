@@ -172,11 +172,17 @@ export async function startServer(): Promise<void> {
               args.sql as string,
               args.max_rows as number | undefined
             );
-            const parsed = JSON.parse(raw) as { truncated: boolean; rowCount: number };
-            const prefix = parsed.truncated
-              ? `Note: result truncated — showing ${parsed.rowCount} rows. ` +
-                `Pass a lower max_rows or add WHERE clauses to narrow the result.\n\n`
-              : "";
+            let prefix = "";
+            try {
+              const parsed = JSON.parse(raw) as { truncated: boolean; rowCount: number };
+              if (parsed.truncated) {
+                prefix =
+                  `Note: result truncated — showing ${parsed.rowCount} rows. ` +
+                  `Pass a lower max_rows or add WHERE clauses to narrow the result.\n\n`;
+              }
+            } catch {
+              // raw is not JSON — return as-is without prefix
+            }
             text = prefix + raw;
             break;
           }
