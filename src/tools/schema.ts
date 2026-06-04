@@ -6,6 +6,7 @@
  */
 import { query } from "../oracle.ts";
 import type { ResolvedConnection } from "../resolver.ts";
+import { truncationNote } from "./utils.ts";
 
 export async function listTables(
   conn: ResolvedConnection,
@@ -32,10 +33,7 @@ export async function listTables(
     const rows = r.NUM_ROWS != null ? ` (~${r.NUM_ROWS} rows)` : "";
     return `  ${r.TABLE_NAME}${rows}`;
   });
-  const truncNote =
-    total > safeLimit
-      ? `\n(Showing ${safeLimit} of ${total} tables. Pass a higher limit or filter by schema to see more.)`
-      : "";
+  const truncNote = truncationNote(safeLimit, total, "tables", "Pass a higher limit or filter by schema to see more.");
 
   return `Tables in ${owner} (${total}):\n${lines.join("\n")}${truncNote}`;
 }
@@ -53,10 +51,7 @@ export async function listSchemas(
 
   const total = Number(countResult.rows[0].CNT);
   const schemas = result.rows.map((r) => `  ${r.OWNER}`);
-  const truncNote =
-    total > safeLimit
-      ? `\n(Showing ${safeLimit} of ${total} schemas. Pass a higher limit to see more.)`
-      : "";
+  const truncNote = truncationNote(safeLimit, total, "schemas");
 
   return `Available schemas (${total}):\n${schemas.join("\n")}${truncNote}`;
 }

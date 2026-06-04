@@ -6,6 +6,7 @@
  */
 import { query } from "../oracle.ts";
 import type { ResolvedConnection } from "../resolver.ts";
+import { truncationNote } from "./utils.ts";
 
 interface FKEntry {
   columns: string[];
@@ -103,10 +104,9 @@ export async function getRelations(
   }
 
   const sortedTables = [...tables].sort();
-  const truncNote =
-    !tableName && totalTables > safeLimit
-      ? `\n(Showing ${safeLimit} of ${totalTables} tables. Pass a higher limit or specify table_name to see more.)`
-      : "";
+  const truncNote = !tableName
+    ? truncationNote(safeLimit, totalTables, "tables", "Pass a higher limit or specify table_name to see more.")
+    : "";
 
   const lines: string[] = [];
   for (const t of sortedTables) {
