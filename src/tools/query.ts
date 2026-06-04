@@ -205,9 +205,17 @@ export async function executeQuery(
   const truncated = result.rows.length > effectiveMaxRows;
   const rows = truncated ? result.rows.slice(0, effectiveMaxRows) : result.rows;
 
-  return JSON.stringify(
-    { columns: result.columns, rows, rowCount: rows.length, truncated },
-    null,
-    2
-  );
+  const payload: Record<string, unknown> = {
+    columns: result.columns,
+    rows,
+    rowCount: rows.length,
+    truncated,
+  };
+  if (truncated) {
+    payload.notice =
+      `Result truncated — showing ${rows.length} rows. ` +
+      `Pass a lower max_rows or add WHERE clauses to narrow the result.`;
+  }
+
+  return JSON.stringify(payload, null, 2);
 }

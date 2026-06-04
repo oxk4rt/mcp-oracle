@@ -166,26 +166,13 @@ export async function startServer(): Promise<void> {
         const schema = args.schema as string | undefined;
 
         switch (name) {
-          case "execute_query": {
-            const raw = await executeQuery(
+          case "execute_query":
+            text = await executeQuery(
               conn,
               args.sql as string,
               args.max_rows as number | undefined
             );
-            let prefix = "";
-            try {
-              const parsed = JSON.parse(raw) as { truncated: boolean; rowCount: number };
-              if (parsed.truncated) {
-                prefix =
-                  `Note: result truncated — showing ${parsed.rowCount} rows. ` +
-                  `Pass a lower max_rows or add WHERE clauses to narrow the result.\n\n`;
-              }
-            } catch {
-              // raw is not JSON — return as-is without prefix
-            }
-            text = prefix + raw;
             break;
-          }
           case "list_tables":
             text = await listTables(conn, schema, args.limit as number | undefined);
             break;
