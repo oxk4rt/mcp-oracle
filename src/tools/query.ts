@@ -202,6 +202,10 @@ export async function executeQuery(
   const effectiveOffset = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
 
   assertSelectOnly(sql);
+  const strippedSql = stripTerminalSemicolon(sql);
+  const sqlHasOwnLimit = /\bFETCH\s+FIRST\b|\bROWNUM\b|\bOFFSET\b/i.test(
+    stripSqlComments(strippedSql)
+  );
   const limitedSql = applyFetchLimit(sql, effectiveMaxRows, effectiveOffset);
   const result = await query(conn, limitedSql);
 
@@ -213,7 +217,7 @@ export async function executeQuery(
     rows,
     rowCount: rows.length,
     truncated,
-    ...(effectiveOffset > 0 && { offset: effectiveOffset }),
+    ...(effectiveOffset > 0 && !sqlHasOwnLimit && { offset: effectiveOffset }),
   };
   if (truncated) {
     payload.notice =
